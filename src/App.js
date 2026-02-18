@@ -1,5 +1,7 @@
   // Save templates to storage and update state
   const saveTemplates = async (updatedTemplates) => {
+import React, { useState, useEffect } from 'react';
+import { Camera, Dumbbell, TrendingUp, Calendar, Plus, X, BarChart3, Copy, Sun, Moon, Trash2, Download, Award, Zap } from 'lucide-react';
     try {
       await window.storage.set('templates', JSON.stringify(updatedTemplates));
       setTemplates(updatedTemplates);
@@ -7,8 +9,6 @@
       console.error('Error saving templates:', error);
     }
   };
-import React, { useState, useEffect } from 'react';
-import { Camera, Dumbbell, TrendingUp, Calendar, Plus, X, BarChart3, Copy, Sun, Moon, Trash2, Download, Award, Zap } from 'lucide-react';
 
 const LiftingTracker = () => {
   const exerciseInstructions = {
