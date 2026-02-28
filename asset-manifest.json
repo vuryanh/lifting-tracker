@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/lifting-tracker/static/css/main.b9d087f6.css",
-    "main.js": "/lifting-tracker/static/js/main.cb065999.js",
+    "main.css": "/lifting-tracker/static/css/main.4a1685cc.css",
+    "main.js": "/lifting-tracker/static/js/main.ac5dc0d5.js",
     "static/js/453.076d2adb.chunk.js": "/lifting-tracker/static/js/453.076d2adb.chunk.js",
     "index.html": "/lifting-tracker/index.html",
-    "main.b9d087f6.css.map": "/lifting-tracker/static/css/main.b9d087f6.css.map",
-    "main.cb065999.js.map": "/lifting-tracker/static/js/main.cb065999.js.map",
+    "main.4a1685cc.css.map": "/lifting-tracker/static/css/main.4a1685cc.css.map",
+    "main.ac5dc0d5.js.map": "/lifting-tracker/static/js/main.ac5dc0d5.js.map",
     "453.076d2adb.chunk.js.map": "/lifting-tracker/static/js/453.076d2adb.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.b9d087f6.css",
-    "static/js/main.cb065999.js"
+    "static/css/main.4a1685cc.css",
+    "static/js/main.ac5dc0d5.js"
   ]
 }
