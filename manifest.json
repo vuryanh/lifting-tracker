@@ -1,6 +1,6 @@
 {
-  "short_name": "Lifting Tracker",
-  "name": "Lifting Tracker",
+  "short_name": "React App",
+  "name": "Create React App Sample",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,8 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "description": "Track your weight lifting progress and photos",
-  "orientation": "portrait"
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
 }
