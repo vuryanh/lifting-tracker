@@ -928,11 +928,12 @@ const LiftingTracker = () => {
   });
 
   const bgClass = darkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-indigo-100';
-  const cardClass = darkMode ? 'bg-slate-800' : 'bg-white';
-  const textClass = darkMode ? 'text-gray-100' : 'text-gray-900';
+  const cardClass = darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100';
+  const textClass = darkMode ? 'text-white' : 'text-gray-900';
   const secondaryTextClass = darkMode ? 'text-slate-300' : 'text-gray-600';
-  const inputClass = darkMode ? 'bg-slate-600 text-white' : 'bg-gray-100 text-gray-900';
-  const buttonClass = darkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300';
+  const inputClass = darkMode ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-900';
+  const buttonClass = darkMode ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800';
+  const fieldClass = darkMode ? 'bg-slate-600 text-white placeholder-slate-400' : 'bg-white text-gray-900 border border-gray-200';
 
   return (
     <div className={`min-h-screen ${bgClass} ${textClass}`}>
@@ -953,7 +954,7 @@ const LiftingTracker = () => {
           </button>
         </div>
 
-        <div className="flex mb-5 gap-1">
+        <div className="flex mb-5 gap-1.5">
           {[
             { id: 'log', icon: <Calendar size={18} />, label: 'Log' },
             { id: 'guide', icon: <Dumbbell size={18} />, label: 'Guide' },
@@ -965,10 +966,10 @@ const LiftingTracker = () => {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex-1 py-2 px-1 rounded-lg font-medium transition-all shadow-md flex flex-col items-center gap-1 ${
+              className={`flex-1 py-2.5 px-1 rounded-xl font-medium transition-all shadow-sm flex flex-col items-center gap-1 ${
                 activeTab === id
-                  ? 'bg-blue-500 text-white'
-                  : darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                  ? 'bg-blue-500 text-white shadow-blue-500/30 shadow-md'
+                  : darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               {icon}
@@ -994,14 +995,14 @@ const LiftingTracker = () => {
               <button
                 key={exercise}
                 onClick={() => openGuide(exercise)}
-                className={`w-full ${cardClass} rounded-lg p-4 shadow-lg text-left transition-colors active:opacity-80`}
+                className={`w-full ${cardClass} rounded-xl p-4 shadow-sm text-left transition-all active:scale-[0.99] hover:border-blue-400`}
               >
-                <div className="font-semibold text-base mb-2">{exercise}</div>
-                <div className="flex flex-wrap gap-2">
+                <div className={`w-full font-semibold text-base mb-2 ${textClass}`}>{exercise}</div>
+                <div className="w-full flex flex-wrap gap-1.5">
                   {exerciseTargets[exercise]?.map((target, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 bg-blue-500 text-white text-xs rounded-full font-medium"
+                      className="px-2.5 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full font-medium border border-blue-500/30"
                     >
                       {target}
                     </span>
@@ -1054,9 +1055,9 @@ const LiftingTracker = () => {
                   <h2 className="text-xl font-bold">New Workout</h2>
                   <button
                     onClick={() => setShowAddWorkout(false)}
-                    className={secondaryTextClass}
+                    className={`p-2 rounded-lg ${buttonClass}`}
                   >
-                    <X size={24} />
+                    <X size={18} />
                   </button>
                 </div>
 
@@ -1071,7 +1072,7 @@ const LiftingTracker = () => {
                 </div>
 
                 {newWorkout.exercises.map((exercise, idx) => (
-                  <div key={idx} className={`${inputClass} rounded-lg p-4 mb-4 relative ${exercise.isSuperset ? 'border-2 border-blue-500' : ''}`}>
+                  <div key={idx} className={`${inputClass} rounded-xl p-4 mb-4 relative overflow-hidden ${exercise.isSuperset ? 'border-2 border-blue-500' : ''}`}>
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">Exercise {idx + 1}</h3>
@@ -1107,16 +1108,16 @@ const LiftingTracker = () => {
                         value={exercise.name}
                         onChange={(e) => updateExercise(idx, 'name', e.target.value)}
                         onFocus={() => setShowExercisePicker(idx)}
-                        className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
+                        className={`w-full min-w-0 p-3 ${fieldClass} rounded-lg text-base`}
                       />
                       
                       {showExercisePicker === idx && exerciseLibrary.length > 0 && (
-                        <div className={`absolute z-10 w-full mt-1 ${cardClass} border ${darkMode ? 'border-slate-600' : 'border-gray-300'} rounded-lg shadow-xl max-h-60 overflow-y-auto`}>
+                        <div className={`absolute z-10 w-full mt-1 ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'} border rounded-xl shadow-2xl max-h-60 overflow-y-auto`}>
                           {filteredExercises(exercise.name).map((ex, i) => (
                             <button
                               key={i}
                               onClick={() => selectExercise(ex, idx)}
-                              className={`w-full text-left p-3 ${darkMode ? 'hover:bg-slate-700 border-slate-600' : 'hover:bg-gray-100 border-gray-200'} border-b last:border-b-0`}
+                              className={`w-full text-left p-3 ${textClass} ${darkMode ? 'hover:bg-slate-600 border-slate-600' : 'hover:bg-gray-50 border-gray-100'} border-b last:border-b-0`}
                             >
                               {ex}
                             </button>
@@ -1136,29 +1137,29 @@ const LiftingTracker = () => {
                     
                     <div className="grid grid-cols-2 gap-2 mb-3">
                       <div>
-                        <label className={`block text-xs ${secondaryTextClass} mb-1`}>Sets</label>
+                        <label className={`block text-xs font-semibold ${secondaryTextClass} mb-1`}>Sets</label>
                         <input
                           type="number"
                           placeholder="3"
                           value={exercise.sets}
                           onChange={(e) => handleSetsChange(idx, e.target.value)}
-                          className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
+                          className={`w-full min-w-0 p-3 ${fieldClass} rounded-lg text-base`}
                         />
                       </div>
                       <div>
-                        <label className={`block text-xs ${secondaryTextClass} mb-1`}>Reps</label>
+                        <label className={`block text-xs font-semibold ${secondaryTextClass} mb-1`}>Reps</label>
                         <input
                           type="number"
                           placeholder="10"
                           value={exercise.reps}
                           onChange={(e) => updateExercise(idx, 'reps', e.target.value)}
-                          className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
+                          className={`w-full min-w-0 p-3 ${fieldClass} rounded-lg text-base`}
                         />
                       </div>
                     </div>
                     <div>
-                      <label className={`block text-xs ${secondaryTextClass} mb-1`}>
-                        Weight (lbs){parseInt(exercise.sets) > 1 ? ' — enter per set' : ''}
+                      <label className={`block text-xs font-semibold ${secondaryTextClass} mb-1`}>
+                        Weight (lbs){parseInt(exercise.sets) > 1 ? ` — per set (${exercise.sets} sets)` : ''}
                       </label>
                       {parseInt(exercise.sets) > 1 ? (
                         <div className="grid grid-cols-2 gap-1">
@@ -1170,7 +1171,7 @@ const LiftingTracker = () => {
                                 placeholder="lbs"
                                 value={(exercise.weights || [])[i] || ''}
                                 onChange={(e) => updateSetWeight(idx, i, e.target.value)}
-                                className={`w-full p-2 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-sm`}
+                                className={`w-full min-w-0 p-2 ${fieldClass} rounded-lg text-sm`}
                               />
                             </div>
                           ))}
@@ -1185,7 +1186,7 @@ const LiftingTracker = () => {
                             updated[idx] = { ...updated[idx], weight: e.target.value, weights: [e.target.value] };
                             setNewWorkout({ ...newWorkout, exercises: updated });
                           }}
-                          className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
+                          className={`w-full min-w-0 p-3 ${fieldClass} rounded-lg text-base`}
                         />
                       )}
                     </div>
