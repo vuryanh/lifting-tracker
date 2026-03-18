@@ -312,26 +312,37 @@ const LiftingTracker = () => {
     notes: ''
   });
 
+  // Calculator state
+  const [oneRMWeight, setOneRMWeight] = useState('');
+  const [oneRMReps, setOneRMReps] = useState('');
+  const [plateWeight, setPlateWeight] = useState('');
+  const [bodyWeights, setBodyWeights] = useState([]);
+  const [newBodyWeight, setNewBodyWeight] = useState('');
+  const [restTimer, setRestTimer] = useState(0);
+  const [isRestTimerActive, setIsRestTimerActive] = useState(false);
+  const [restTimerDuration, setRestTimerDuration] = useState(90);
+
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      const workoutsResult = await window.storage.get('workouts');
-      const photosResult = await window.storage.get('photos');
-      const libraryResult = await window.storage.get('exercise-library');
-      const templatesResult = await window.storage.get('templates');
-      const darkModeResult = await window.storage.get('dark-mode');
+      const workoutsResult = localStorage.getItem('workouts');
+      const photosResult = localStorage.getItem('photos');
+      const libraryResult = localStorage.getItem('exercise-library');
+      const templatesResult = localStorage.getItem('templates');
+      const darkModeResult = localStorage.getItem('dark-mode');
+      const bodyWeightsResult = localStorage.getItem('body-weights');
       
-      if (workoutsResult?.value) {
-        setWorkouts(JSON.parse(workoutsResult.value));
+      if (workoutsResult) {
+        setWorkouts(JSON.parse(workoutsResult));
       }
-      if (photosResult?.value) {
-        setPhotos(JSON.parse(photosResult.value));
+      if (photosResult) {
+        setPhotos(JSON.parse(photosResult));
       }
-      if (libraryResult?.value) {
-        const savedLibrary = JSON.parse(libraryResult.value);
+      if (libraryResult) {
+        const savedLibrary = JSON.parse(libraryResult);
         // Merge common exercises with user's saved exercises
         const merged = [...new Set([...commonExercises, ...savedLibrary])];
         setExerciseLibrary(merged);
@@ -339,11 +350,14 @@ const LiftingTracker = () => {
         // First time - just use common exercises
         setExerciseLibrary(commonExercises);
       }
-      if (templatesResult?.value) {
-        setTemplates(JSON.parse(templatesResult.value));
+      if (templatesResult) {
+        setTemplates(JSON.parse(templatesResult));
       }
-      if (darkModeResult?.value) {
-        setDarkMode(JSON.parse(darkModeResult.value));
+      if (darkModeResult) {
+        setDarkMode(JSON.parse(darkModeResult));
+      }
+      if (bodyWeightsResult) {
+        setBodyWeights(JSON.parse(bodyWeightsResult));
       }
     } catch (error) {
       console.log('No existing data or error loading:', error);
@@ -351,38 +365,47 @@ const LiftingTracker = () => {
     }
   };
 
-  const saveWorkouts = async (updatedWorkouts) => {
+  const saveWorkouts = (updatedWorkouts) => {
     try {
-      await window.storage.set('workouts', JSON.stringify(updatedWorkouts));
+      localStorage.setItem('workouts', JSON.stringify(updatedWorkouts));
       setWorkouts(updatedWorkouts);
     } catch (error) {
       console.error('Error saving workouts:', error);
     }
   };
 
-  const savePhotos = async (updatedPhotos) => {
+  const savePhotos = (updatedPhotos) => {
     try {
-      await window.storage.set('photos', JSON.stringify(updatedPhotos));
+      localStorage.setItem('photos', JSON.stringify(updatedPhotos));
       setPhotos(updatedPhotos);
     } catch (error) {
       console.error('Error saving photos:', error);
     }
   };
 
-  const saveCustomPresets = async (updatedPresets) => {
+  const saveCustomPresets = (updatedPresets) => {
     try {
-      await window.storage.set('custom-presets', JSON.stringify(updatedPresets));
+      localStorage.setItem('custom-presets', JSON.stringify(updatedPresets));
       setCustomPresets(updatedPresets);
     } catch (error) {
       console.error('Error saving custom presets:', error);
     }
   };
 
-  const toggleDarkMode = async () => {
+  const saveTemplates = (updatedTemplates) => {
+    try {
+      localStorage.setItem('templates', JSON.stringify(updatedTemplates));
+      setTemplates(updatedTemplates);
+    } catch (error) {
+      console.error('Error saving templates:', error);
+    }
+  };
+
+  const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
     try {
-      await window.storage.set('dark-mode', JSON.stringify(newMode));
+      localStorage.setItem('dark-mode', JSON.stringify(newMode));
     } catch (error) {
       console.error('Error saving theme:', error);
     }
@@ -391,13 +414,33 @@ const LiftingTracker = () => {
   const addExercise = () => {
     setNewWorkout({
       ...newWorkout,
-      exercises: [...newWorkout.exercises, { name: '', sets: '', reps: '', weight: '', isSuperset: false }]
+      exercises: [...newWorkout.exercises, { name: '', sets: '', reps: '', weight: '', weights: [], isSuperset: false }]
     });
   };
 
   const updateExercise = (index, field, value) => {
     const updated = [...newWorkout.exercises];
     updated[index][field] = value;
+    setNewWorkout({ ...newWorkout, exercises: updated });
+  };
+
+  const handleSetsChange = (idx, value) => {
+    const updated = [...newWorkout.exercises];
+    const numSets = parseInt(value) || 0;
+    const currentWeights = updated[idx].weights || [];
+    const defaultWeight = updated[idx].weight || '';
+    const newWeights = Array.from({ length: numSets }, (_, i) =>
+      currentWeights[i] !== undefined ? currentWeights[i] : defaultWeight
+    );
+    updated[idx] = { ...updated[idx], sets: value, weights: newWeights };
+    setNewWorkout({ ...newWorkout, exercises: updated });
+  };
+
+  const updateSetWeight = (exerciseIdx, setIdx, value) => {
+    const updated = [...newWorkout.exercises];
+    const newWeights = [...(updated[exerciseIdx].weights || [])];
+    newWeights[setIdx] = value;
+    updated[exerciseIdx] = { ...updated[exerciseIdx], weights: newWeights, weight: newWeights[0] || '' };
     setNewWorkout({ ...newWorkout, exercises: updated });
   };
 
@@ -428,13 +471,13 @@ const LiftingTracker = () => {
         setExerciseLibrary(updatedLibrary);
         // Only save custom exercises (not common ones) to storage
         const customOnly = updatedLibrary.filter(ex => !commonExercises.includes(ex));
-        window.storage.set('exercise-library', JSON.stringify(customOnly)).catch(console.error);
+        localStorage.setItem('exercise-library', JSON.stringify(customOnly));
       }
       
       saveWorkouts([workout, ...workouts]);
       setNewWorkout({
         date: new Date().toISOString().split('T')[0],
-        exercises: [{ name: '', sets: '', reps: '', weight: '' }],
+        exercises: [{ name: '', sets: '', reps: '', weight: '', weights: [], isSuperset: false }],
         notes: ''
       });
       setShowAddWorkout(false);
@@ -480,6 +523,76 @@ const LiftingTracker = () => {
 
   const deleteTemplate = (id) => {
     saveTemplates(templates.filter(t => t.id !== id));
+  };
+
+  // Calculator functions
+  const calculate1RM = () => {
+    if (!oneRMWeight || !oneRMReps) return 0;
+    const weight = parseFloat(oneRMWeight);
+    const reps = parseInt(oneRMReps);
+    if (reps === 1) return weight;
+    // Brzycki formula: 1RM = weight / (1.0278 - 0.0278 * reps)
+    return Math.round(weight / (1.0278 - 0.0278 * reps));
+  };
+
+  const calculatePlates = () => {
+    if (!plateWeight) return [];
+    const targetWeight = parseFloat(plateWeight);
+    const barWeight = 45; // Standard Olympic barbell
+    const plateWeights = [45, 35, 25, 10, 5, 2.5];
+    
+    let remainingWeight = (targetWeight - barWeight) / 2; // Each side
+    const plates = [];
+    
+    plateWeights.forEach(plateWeight => {
+      const count = Math.floor(remainingWeight / plateWeight);
+      if (count > 0) {
+        plates.push({ weight: plateWeight, count });
+        remainingWeight -= count * plateWeight;
+      }
+    });
+    
+    return plates;
+  };
+
+  const addBodyWeight = () => {
+    if (!newBodyWeight) return;
+    const weight = {
+      date: new Date().toISOString().split('T')[0],
+      weight: parseFloat(newBodyWeight)
+    };
+    const updatedWeights = [weight, ...bodyWeights].sort((a, b) => new Date(b.date) - new Date(a.date));
+    setBodyWeights(updatedWeights);
+    localStorage.setItem('body-weights', JSON.stringify(updatedWeights));
+    setNewBodyWeight('');
+  };
+
+  const startRestTimer = (duration = restTimerDuration) => {
+    setRestTimer(duration);
+    setIsRestTimerActive(true);
+    
+    const interval = setInterval(() => {
+      setRestTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsRestTimerActive(false);
+          // Try to play notification sound
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IAAAAAAAAQABAA==');
+            audio.play().catch(e => console.log('Audio notification failed:', e));
+          } catch (e) {
+            console.log('Audio notification not supported');
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const stopRestTimer = () => {
+    setRestTimer(0);
+    setIsRestTimerActive(false);
   };
 
   const handlePhotoUpload = (e) => {
@@ -710,7 +823,7 @@ const LiftingTracker = () => {
           const uniqueLibrary = [...new Set(mergedLibrary)];
           setExerciseLibrary(uniqueLibrary);
           const customOnly = uniqueLibrary.filter(ex => !commonExercises.includes(ex));
-          await window.storage.set('exercise-library', JSON.stringify(customOnly));
+          localStorage.setItem('exercise-library', JSON.stringify(customOnly));
         }
         
         alert('Data imported successfully! Your existing data has been preserved and merged with the import.');
@@ -816,98 +929,64 @@ const LiftingTracker = () => {
 
   const bgClass = darkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-indigo-100';
   const cardClass = darkMode ? 'bg-slate-800' : 'bg-white';
-  const textClass = darkMode ? 'text-white' : 'text-gray-900';
-  const secondaryTextClass = darkMode ? 'text-slate-400' : 'text-gray-600';
+  const textClass = darkMode ? 'text-gray-100' : 'text-gray-900';
+  const secondaryTextClass = darkMode ? 'text-slate-300' : 'text-gray-600';
   const inputClass = darkMode ? 'bg-slate-600 text-white' : 'bg-gray-100 text-gray-900';
   const buttonClass = darkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300';
 
   return (
     <div className={`min-h-screen ${bgClass} ${textClass}`}>
-      <div className="max-w-4xl mx-auto p-4 pb-20">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="max-w-4xl mx-auto px-3 py-3 sm:px-6 sm:py-6 pb-20">
+        <div className="mb-4 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold mb-1 flex items-center gap-2">
-              <Dumbbell className="text-blue-400" size={32} />
+            <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center gap-2">
+              <Dumbbell className="text-blue-400" size={28} />
               Lifting Tracker
             </h1>
-            <p className={secondaryTextClass}>Track your progress</p>
+            <p className={`text-sm ${secondaryTextClass}`}>Track your progress</p>
           </div>
           <button
             onClick={toggleDarkMode}
             className={`p-3 rounded-full ${cardClass} shadow-lg`}
           >
-            {darkMode ? <Sun size={24} /> : <Moon size={24} />}
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         </div>
 
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('log')}
-            className={`flex-1 min-w-20 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${
-              activeTab === 'log'
-                ? 'bg-blue-500 text-white shadow-lg'
-                : `${buttonClass} ${textClass}`
-            }`}
-          >
-            <Calendar className="inline mr-1" size={16} />
-            Log
-          </button>
-          <button
-            onClick={() => setActiveTab('guide')}
-            className={`flex-1 min-w-20 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${
-              activeTab === 'guide'
-                ? 'bg-blue-500 text-white shadow-lg'
-                : `${buttonClass} ${textClass}`
-            }`}
-          >
-            <Dumbbell className="inline mr-1" size={16} />
-            Guide
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex-1 min-w-20 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${
-              activeTab === 'history'
-                ? 'bg-blue-500 text-white shadow-lg'
-                : `${buttonClass} ${textClass}`
-            }`}
-          >
-            <TrendingUp className="inline mr-1" size={16} />
-            History
-          </button>
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`flex-1 min-w-20 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${
-              activeTab === 'stats'
-                ? 'bg-blue-500 text-white shadow-lg'
-                : `${buttonClass} ${textClass}`
-            }`}
-          >
-            <BarChart3 className="inline mr-1" size={16} />
-            Stats
-          </button>
-          <button
-            onClick={() => setActiveTab('photos')}
-            className={`flex-1 min-w-20 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${
-              activeTab === 'photos'
-                ? 'bg-blue-500 text-white shadow-lg'
-                : `${buttonClass} ${textClass}`
-            }`}
-          >
-            <Camera className="inline mr-1" size={16} />
-            Photos
-          </button>
+        <div className="flex mb-5 gap-1">
+          {[
+            { id: 'log', icon: <Calendar size={18} />, label: 'Log' },
+            { id: 'guide', icon: <Dumbbell size={18} />, label: 'Guide' },
+            { id: 'history', icon: <TrendingUp size={18} />, label: 'History' },
+            { id: 'stats', icon: <BarChart3 size={18} />, label: 'Stats' },
+            { id: 'photos', icon: <Camera size={18} />, label: 'Photos' },
+            { id: 'tools', icon: <Zap size={18} />, label: 'Tools' },
+          ].map(({ id, icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 py-2 px-1 rounded-lg font-medium transition-all shadow-md flex flex-col items-center gap-1 ${
+                activeTab === id
+                  ? 'bg-blue-500 text-white'
+                  : darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              {icon}
+              <span className="text-[10px] sm:text-xs leading-tight">{label}</span>
+            </button>
+          ))}
         </div>
 
         {activeTab === 'guide' && (
-          <div className="space-y-3">
-            <div className={`${cardClass} rounded-lg p-4 shadow-lg`}>
-              <h3 className="text-xl font-bold mb-3">Exercise Guide</h3>
+          <div className="space-y-4">
+            <div className={`${cardClass} rounded-lg p-6 shadow-lg`}>
+              <h3 className="text-xl font-bold mb-4">Exercise Guide</h3>
               <input
                 type="text"
                 placeholder="Search exercises..."
                 value={guideSearchQuery}
                 onChange={(e) => setGuideSearchQuery(e.target.value)}
-                className={`w-full p-3 ${inputClass} rounded-lg border-0 text-base`}
+                className={`w-full p-4 ${inputClass} rounded-lg border-0 text-base`}
               />
             </div>
             
@@ -915,10 +994,10 @@ const LiftingTracker = () => {
               <button
                 key={exercise}
                 onClick={() => openGuide(exercise)}
-                className={`w-full ${cardClass} rounded-lg p-4 shadow-lg text-left hover:scale-[1.02] transition-transform`}
+                className={`w-full ${cardClass} rounded-lg p-4 shadow-lg text-left transition-colors active:opacity-80`}
               >
-                <div className="font-semibold text-lg mb-2">{exercise}</div>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="font-semibold text-base mb-2">{exercise}</div>
+                <div className="flex flex-wrap gap-2">
                   {exerciseTargets[exercise]?.map((target, idx) => (
                     <span
                       key={idx}
@@ -928,16 +1007,11 @@ const LiftingTracker = () => {
                     </span>
                   ))}
                 </div>
-                {exerciseInstructions[exercise] && (
-                  <div className={`text-sm ${secondaryTextClass} line-clamp-2`}>
-                    {exerciseInstructions[exercise]}
-                  </div>
-                )}
               </button>
             ))}
             
             {filteredGuideExercises.length === 0 && (
-              <div className={`text-center py-12 ${secondaryTextClass}`}>
+              <div className={`text-center py-16 px-6 ${secondaryTextClass}`}>
                 <p>No exercises found matching "{guideSearchQuery}"</p>
               </div>
             )}
@@ -1060,14 +1134,14 @@ const LiftingTracker = () => {
                       </div>
                     )}
                     
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       <div>
                         <label className={`block text-xs ${secondaryTextClass} mb-1`}>Sets</label>
                         <input
                           type="number"
                           placeholder="3"
                           value={exercise.sets}
-                          onChange={(e) => updateExercise(idx, 'sets', e.target.value)}
+                          onChange={(e) => handleSetsChange(idx, e.target.value)}
                           className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
                         />
                       </div>
@@ -1081,16 +1155,39 @@ const LiftingTracker = () => {
                           className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
                         />
                       </div>
-                      <div>
-                        <label className={`block text-xs ${secondaryTextClass} mb-1`}>Weight</label>
+                    </div>
+                    <div>
+                      <label className={`block text-xs ${secondaryTextClass} mb-1`}>
+                        Weight (lbs){parseInt(exercise.sets) > 1 ? ' — enter per set' : ''}
+                      </label>
+                      {parseInt(exercise.sets) > 1 ? (
+                        <div className="grid grid-cols-2 gap-1">
+                          {Array.from({ length: parseInt(exercise.sets) }, (_, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                              <span className={`text-xs ${secondaryTextClass} w-7 shrink-0`}>S{i + 1}</span>
+                              <input
+                                type="number"
+                                placeholder="lbs"
+                                value={(exercise.weights || [])[i] || ''}
+                                onChange={(e) => updateSetWeight(idx, i, e.target.value)}
+                                className={`w-full p-2 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-sm`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
                         <input
                           type="number"
                           placeholder="135"
                           value={exercise.weight}
-                          onChange={(e) => updateExercise(idx, 'weight', e.target.value)}
+                          onChange={(e) => {
+                            const updated = [...newWorkout.exercises];
+                            updated[idx] = { ...updated[idx], weight: e.target.value, weights: [e.target.value] };
+                            setNewWorkout({ ...newWorkout, exercises: updated });
+                          }}
                           className={`w-full p-3 ${darkMode ? 'bg-slate-700' : 'bg-white'} rounded text-base`}
                         />
-                      </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1168,7 +1265,10 @@ const LiftingTracker = () => {
                       <div key={idx} className={`${inputClass} rounded p-3`}>
                         <div className="font-semibold mb-1">{exercise.name}</div>
                         <div className={`text-sm ${secondaryTextClass}`}>
-                          {exercise.sets} sets × {exercise.reps} reps @ {exercise.weight} lbs
+                          {exercise.sets} sets × {exercise.reps} reps
+                          {exercise.weights && exercise.weights.filter(w => w).length > 1
+                            ? ` @ ${exercise.weights.map((w, i) => `S${i + 1}: ${w}lbs`).join(', ')}`
+                            : exercise.weight ? ` @ ${exercise.weight} lbs` : ''}
                         </div>
                       </div>
                     ))}
@@ -1291,7 +1391,7 @@ const LiftingTracker = () => {
                         <X size={16} />
                       </button>
                     </div>
-                    <div className="p-3">
+                    <div className="p-4">
                       <p className={`text-sm ${secondaryTextClass}`}>{photo.date}</p>
                     </div>
                   </div>
@@ -1301,9 +1401,184 @@ const LiftingTracker = () => {
           </div>
         )}
 
+        {activeTab === 'tools' && (
+          <div className="space-y-6">
+            {/* Rest Timer */}
+            <div className={`${cardClass} rounded-lg p-6 shadow-lg`}>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Zap className="text-blue-400" />
+                Rest Timer
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-5 flex-wrap">
+                  <input
+                    type="number"
+                    value={restTimerDuration}
+                    onChange={(e) => setRestTimerDuration(parseInt(e.target.value) || 90)}
+                    className={`w-20 p-3 ${inputClass} rounded border-0 text-center`}
+                    min="1"
+                    max="600"
+                  />
+                  <span className={secondaryTextClass}>seconds</span>
+                  <button
+                    onClick={() => startRestTimer()}
+                    disabled={isRestTimerActive}
+                    className={`px-6 py-3 ${isRestTimerActive ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-all font-semibold shadow-lg`}
+                  >
+                    Start Timer
+                  </button>
+                  {isRestTimerActive && (
+                    <button
+                      onClick={stopRestTimer}
+                      className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all font-semibold shadow-lg"
+                    >
+                      Stop
+                    </button>
+                  )}
+                </div>
+                {restTimer > 0 && (
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-400 mb-2">
+                      {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, '0')}
+                    </div>
+                    <div className={`text-sm ${secondaryTextClass}`}>
+                      {isRestTimerActive ? 'Rest in progress...' : 'Time\'s up!'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 1RM Calculator */}
+            <div className={`${cardClass} rounded-lg p-6 shadow-lg`}>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Award className="text-blue-400" />
+                1RM Calculator
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${secondaryTextClass}`}>
+                    Weight (lbs)
+                  </label>
+                  <input
+                    type="number"
+                    value={oneRMWeight}
+                    onChange={(e) => setOneRMWeight(e.target.value)}
+                    className={`w-full p-3 ${inputClass} rounded border-0`}
+                    placeholder="225"
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${secondaryTextClass}`}>
+                    Reps
+                  </label>
+                  <input
+                    type="number"
+                    value={oneRMReps}
+                    onChange={(e) => setOneRMReps(e.target.value)}
+                    className={`w-full p-3 ${inputClass} rounded border-0`}
+                    placeholder="5"
+                    min="1"
+                    max="20"
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${secondaryTextClass}`}>
+                    Estimated 1RM
+                  </label>
+                  <div className={`w-full p-3 ${inputClass} rounded border-0 text-center font-bold text-lg`}>
+                    {oneRMWeight && oneRMReps ? `${calculate1RM()} lbs` : '-- lbs'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Plate Calculator */}
+            <div className={`${cardClass} rounded-lg p-6 shadow-lg`}>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Dumbbell className="text-blue-400" />
+                Plate Calculator
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${secondaryTextClass}`}>
+                    Target Weight (lbs)
+                  </label>
+                  <input
+                    type="number"
+                    value={plateWeight}
+                    onChange={(e) => setPlateWeight(e.target.value)}
+                    className={`w-full p-3 ${inputClass} rounded border-0`}
+                    placeholder="315"
+                  />
+                </div>
+                {plateWeight && (
+                  <div>
+                    <p className={`text-sm ${secondaryTextClass} mb-3`}>
+                      Plates needed per side (45lb bar):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {calculatePlates().map((plate, idx) => (
+                        <div
+                          key={idx}
+                          className="px-3 py-2 bg-blue-500 text-white rounded-lg font-medium"
+                        >
+                          {plate.count}×{plate.weight}lb
+                        </div>
+                      ))}
+                    </div>
+                    {calculatePlates().length === 0 && (
+                      <p className={`text-sm ${secondaryTextClass}`}>
+                        Enter a weight above 45 lbs
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Body Weight Tracker */}
+            <div className={`${cardClass} rounded-lg p-6 shadow-lg`}>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <TrendingUp className="text-blue-400" />
+                Body Weight
+              </h3>
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    value={newBodyWeight}
+                    onChange={(e) => setNewBodyWeight(e.target.value)}
+                    className={`flex-1 p-3 ${inputClass} rounded border-0`}
+                    placeholder="Enter weight (lbs)"
+                    step="0.1"
+                  />
+                  <button
+                    onClick={addBodyWeight}
+                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all"
+                  >
+                    Add
+                  </button>
+                </div>
+                {bodyWeights.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className={`font-medium ${secondaryTextClass}`}>Recent Entries:</h4>
+                    {bodyWeights.slice(0, 5).map((entry, idx) => (
+                      <div key={idx} className="flex justify-between items-center py-2">
+                        <span className={secondaryTextClass}>{entry.date}</span>
+                        <span className="font-semibold">{entry.weight} lbs</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {showPresetModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className={`${cardClass} rounded-lg p-6 max-w-2xl w-full my-8`}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
+            <div className={`${cardClass} rounded-lg p-4 sm:p-6 max-w-2xl w-full my-4 max-h-[90vh] overflow-y-auto`}>
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-2xl font-bold">Preset Workouts</h3>
                 <button
